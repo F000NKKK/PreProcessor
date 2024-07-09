@@ -36,14 +36,14 @@ namespace PreProcessor.RabbitMq
             Logger.Info($"Сообщение отправлено в {queueName}");
         }
 
-        public void AcknowledgeMessage(ulong deliveryTag)
+        public async Task AcknowledgeMessage(ulong deliveryTag)
         {
-            _channel.BasicAck(deliveryTag, false);
+            await Task.Run(() => _channel.BasicAck(deliveryTag, false));
         }
 
-        public void RejectMessage(ulong deliveryTag, bool requeue)
+        public async Task RejectMessage(ulong deliveryTag, bool requeue)
         {
-            _channel.BasicNack(deliveryTag, false, requeue);
+            await Task.Run(() => _channel.BasicReject(deliveryTag, requeue));
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -75,14 +75,14 @@ namespace PreProcessor.RabbitMq
                     SendMessageToQueue(ProcessorQueueName, JsonSerializer.Serialize(deserializedMessage));
 
                     // Подтверждение сообщения
-                    AcknowledgeMessage(ea.DeliveryTag);
+                    await AcknowledgeMessage(ea.DeliveryTag);
                     Logger.Info($"Сообщение подтверждено с deliveryTag: {ea.DeliveryTag}");
                 }
                 catch (Exception ex)
                 {
                     Logger.Error($"Произошла ошибка: {ex.Message}");
                     // Отклонение сообщения в случае ошибки
-                    RejectMessage(ea.DeliveryTag, true);
+                    await RejectMessage(ea.DeliveryTag, true);
                 }
             };
 
